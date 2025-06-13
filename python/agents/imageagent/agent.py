@@ -28,6 +28,7 @@ from google.adk.runners import Runner
 from google.adk.artifacts import InMemoryArtifactService # Or GcsArtifactService
 from google.adk.agents import LlmAgent # Any agent
 from google.adk.sessions import InMemorySessionService
+#from google.adk.artifacts.tool_context import save_artifact
 
 import vertexai
 from vertexai.preview.vision_models import ImageGenerationModel
@@ -36,7 +37,7 @@ from vertexai.preview.vision_models import ImageGenerationModel
 APP_NAME = "image_agent" # New App Name
 USER_ID = "dev_user_01"
 SESSION_ID_BASE = "loop_exit_tool_session" # New Base Session ID
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-2.5-pro-preview-06-05"
 
 #STATE_INITIAL_PROMPT = "initial_prompt"
 
@@ -57,7 +58,7 @@ session = await session_service.create_session(
     state={"initial_prompt": "null"}
 )
 print(f"Initial state: {session.state}")
-'''
+
 #instatiate artifact runner
 artifact_service = InMemoryArtifactService() # Choose an implementation
 session_service = InMemorySessionService()
@@ -68,6 +69,7 @@ runner = Runner(
     session_service=session_service,
     artifact_service=artifact_service # Provide the service instance here
 )
+'''
 
 
 def exit_loop(tool_context: ToolContext):
@@ -78,7 +80,7 @@ def exit_loop(tool_context: ToolContext):
   return {}
 
 async def call_imagen_tool(
-    context: ToolContext,
+    tool_context: ToolContext,
     prompt: str,
     artifact_filename: str,
     aspect_ratio: str
@@ -86,7 +88,7 @@ async def call_imagen_tool(
     """Tool to generate an image from a prompt using Imagen, and save it as an artifact.
     
     Args:
-        context: The ToolContext provided by the ADK Runner, used to save artifacts.
+        tool_context: The ToolContext provided by the ADK Runner, used to save artifacts.
         prompt (str): The text prompt to be sent to the Imagen model.
         artifact_filename (str): The unique name for the artifact (e.g., 'report.png').
         aspect_ratio (str): Optional. The aspect ratio of the generated image (e.g., '1:1', '16:9', '9:16'). Defaults to '1:1'.
@@ -173,7 +175,7 @@ async def call_imagen_tool(
         # 4. --- Save the Artifact using the ToolContext ---
         # This is the core interaction with the ADK artifact system.
         print(f"Saving artifact with filename: '{artifact_filename}'")
-        version = await context.save_artifact(
+        version = await tool_context.save_artifact(
             filename=artifact_filename,
             artifact=image_artifact
         )
@@ -228,21 +230,22 @@ initial_image_agent = LlmAgent(
     model=GEMINI_MODEL,
     include_contents='none',
     
-    instruction=f"""You are an expert prompt engineering assistant for Google's Imagen 3 text-to-image AI. You have two tasks:
-   1. Ask the user what kind of image they would like to generate.
-  2. Based on the user's input, determine an appropriate Imagen prompt, a unique artifact_filename (e.g., "my_image_description.png"), and an aspect_ratio.
-  3. Call the `call_imagen` tool with the generated prompt, artifact_filename, and aspect_ratio.
-  4. After the `call_imagen` tool returns the `artifact_filename` (which should be the same as the one you provided to the tool if successful):
+    instruction=f"""You are an expert prompt engineering assistant for Google's Imagen 3 text-to-image AI. You have three tasks:
+   1. Use the input provided by the user to determine an appropriate Imagen prompt, a unique artifact_filename (e.g., "my_image_description.png"), and an aspect_ratio.
+  2. Call the `call_imagen` tool with the generated prompt, artifact_filename, and aspect_ratio.
+  3. After the `call_imagen` tool returns the `artifact_filename` (which should be the same as the one you provided to the tool if successful):
      Your final output for this turn MUST be a string representing a Python list containing exactly two string elements:
      the `artifact_filename` returned by the tool, and the `prompt` you used for the `call_imagen` tool.
      Example of correct final output format: `["my_image_description.png", "the full prompt text used"]`
      Do NOT add any other text, conversation, or explanation before or after this list string.
 
+     *only* output a python list in the format stated above.
+
 
 """,
     description="Generates an imagen image based on user feedback to the prompt.",
     output_key=STATE_CURRENT_IMAGE,
-    tools=[save_artifact, call_imagen]
+    tools=[call_imagen]
 )
 
 #need to have the agent take the URI as input!
@@ -316,8 +319,22 @@ refinement_loop = LoopAgent(
 
 # STEP 3: Overall Sequential Pipeline
 # For ADK tools compatibility, the root agent must be named `root_agent`
+
 root_agent = SequentialAgent(
-    name="IterativeWritingPipeline",
+    name="IterativeImagePipeline",
+    sub_agents=[
+        initial_image_agent, # Run first to create initial doc
+        refinement_loop       # Then run the critique/refine loop
+    ],
+    description="Generates an initial image and then iteratively refines it with critique using an exit tool."
+)
+'''
+root_agent = LlmAgent(
+    model=GEMINI_MODEL,
+    name="IterativeImagePipeline",
+    instruction="""
+    You will first run the initial_image_agent, and when it has returned a string like "my_image_description.png", "the full prompt text used", you will call the refinement loop
+    """,
     sub_agents=[
         initial_image_agent, # Run first to create initial doc
         refinement_loop       # Then run the critique/refine loop
@@ -326,7 +343,7 @@ root_agent = SequentialAgent(
 )
 
 
-''' --- example agents 
+ --- example agents 
 
 def get_weather(city: str) -> dict:
     """Retrieves the current weather report for a specified city.
