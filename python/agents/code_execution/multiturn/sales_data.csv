@@ -1,0 +1,51 @@
+OrderID,ProductID,ProductName,Category,UnitPrice,Quantity,TotalPrice,SaleDate,Region
+1001,M-4K-004,4K Monitor,Peripherals,449.99,2,899.98,2025-04-03 14:21:15,West
+1002,LP-001,Laptop Pro,Electronics,1299.99,1,1299.99,2025-04-03 18:05:30,North
+1003,LS-008,Laptop Stand,Accessories,39.99,3,119.97,2025-04-04 09:11:45,West
+1004,SSD-1T-007,External SSD 1TB,Storage,149.99,1,149.99,2025-04-05 11:30:00,South
+1005,WM-002,Wireless Mouse,Accessories,49.99,1,49.99,2025-04-06 16:45:10,East
+1006,MK-005,Mechanical Keyboard,Peripherals,119.99,1,119.99,2025-04-07 10:00:55,West
+1007,WC-HD-006,Webcam HD,Accessories,89.99,2,179.98,2025-04-08 13:22:30,North
+1008,UH-003,USB-C Hub,Accessories,79.99,1,79.99,2025-04-09 19:01:20,South
+1009,LP-001,Laptop Pro,Electronics,1299.99,1,1299.99,2025-04-10 08:55:00,East
+1010,M-4K-004,4K Monitor,Peripherals,449.99,1,449.99,2025-04-11 12:15:40,West
+1011,LS-008,Laptop Stand,Accessories,39.99,5,199.95,2025-04-12 15:30:11,North
+1012,SSD-1T-007,External SSD 1TB,Storage,149.99,1,149.99,2025-04-13 17:40:50,East
+1013,WM-002,Wireless Mouse,Accessories,49.99,2,99.98,2025-04-14 20:00:00,South
+1014,MK-005,Mechanical Keyboard,Peripherals,119.99,3,359.97,2025-04-15 09:05:30,West
+1015,LP-001,Laptop Pro,Electronics,1299.99,1,1299.99,2025-04-16 11:11:11,North
+1016,WC-HD-006,Webcam HD,Accessories,89.99,1,89.99,2025-04-17 14:25:00,West
+1017,UH-003,USB-C Hub,Accessories,79.99,2,159.98,2025-04-18 16:33:45,South
+1018,M-4K-004,4K Monitor,Peripherals,449.99,1,449.99,2025-04-19 18:50:00,East
+1019,LS-008,Laptop Stand,Accessories,39.99,1,39.99,2025-04-20 12:00:00,West
+1020,SSD-1T-007,External SSD 1TB,Storage,149.99,2,299.98,2025-04-21 10:10:10,North
+1021,WM-002,Wireless Mouse,Accessories,49.99,1,49.99,2025-04-22 13:13:13,South
+1022,LP-001,Laptop Pro,Electronics,1299.99,1,1299.99,2025-04-23 15:20:30,East
+1023,MK-005,Mechanical Keyboard,Peripherals,119.99,1,119.99,2025-04-24 17:35:00,West
+1024,WC-HD-006,Webcam HD,Accessories,89.99,4,359.96,2025-04-25 09:45:00,North
+1025,UH-003,USB-C Hub,Accessories,79.99,1,79.99,2025-04-26 11:55:00,South
+1026,M-4K-004,4K Monitor,Peripherals,449.99,1,449.99,2025-04-27 14:10:00,East
+1027,LS-008,Laptop Stand,Accessories,39.99,2,79.98,2025-04-28 16:25:00,West
+1028,SSD-1T-007,External SSD 1TB,Storage,149.99,1,149.99,2025-04-29 18:30:00,North
+1029,WM-002,Wireless Mouse,Accessories,49.99,3,149.97,2025-04-30 21:00:00,South
+1030,LP-001,Laptop Pro,Electronics,1299.99,1,1299.99,2025-05-01 08:00:00,East
+1031,MK-005,Mechanical Keyboard,Peripherals,119.99,1,119.99,2025-05-02 10:15:00,West
+1032,WC-HD-006,Webcam HD,Accessories,89.99,1,89.99,2025-05-03 12:30:00,North
+1033,UH-003,USB-C Hub,Accessories,79.99,2,159.98,2025-05-04 14:45:00,South
+1034,M-4K-004,4K Monitor,Peripherals,449.99,2,899.98,2025-05-05 17:00:00,East
+1035,LS-008,Laptop Stand,Accessories,39.99,1,39.99,2025-05-06 19:15:00,West
+1036,SSD-1T-007,External SSD 1TB,Storage,149.99,1,149.99,2025-05-07 21:30:00,North
+1037,WM-002,Wireless Mouse,Accessories,49.99,1,49.99,2025-05-08 09:00:00,South
+1038,LP-001,Laptop Pro,Electronics,1299.99,1,1299.99,2025-05-09 11:20:00,East
+1039,MK-005,Mechanical Keyboard,Peripherals,119.99,2,239.98,2025-05-10 13:40:00,West
+1040,WC-HD-006,Webcam HD,Accessories,89.99,1,89.99,2025-05-11 16:00:00,North
+1041,UH-003,USB-C Hub,Accessories,79.99,1,79.99,2025-05-12 18:20:00,South
+1042,M-4K-004,4K Monitor,Peripherals,449.99,1,449.99,2025-05-13 20:40:00,East
+1043,LS-008,Laptop Stand,Accessories,39.99,4,159.96,2025-05-14 08:30:00,West
+1044,SSD-1T-007,External SSD 1TB,Storage,149.99,1,149.99,2025-05-15 10:50:00,North
+1045,WM-002,Wireless Mouse,Accessories,49.99,1,49.99,2025-05-16 13:10:00,South
+1046,LP-001,Laptop Pro,Electronics,1299.99,1,1299.99,2025-05-17 15:30:00,East
+1047,MK-005,Mechanical Keyboard,Peripherals,119.99,1,119.99,2025-05-18 17:50:00,West
+1048,WC-HD-006,Webcam HD,Accessories,89.99,2,179.98,2025-05-19 20:10:00,North
+1049,UH-003,USB-C Hub,Accessories,79.99,1,79.99,2025-05-20 09:20:00,South
+1050,M-4K-004,4K Monitor,Peripherals,449.99,1,449.99,2025-05-21 11:40:00,East

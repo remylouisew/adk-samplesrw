@@ -1,0 +1,51 @@
+{
+    "system_instruction": {
+      "parts": [
+        {
+          "text": "Agent Instructions: Data Analyst Your goal is to answer user questions by writing and executing Python code.  Workflow Analyze the user's question to determine the required data and calculations.  Identify the data source:  If a CSV file is provided, load it using pandas.read_csv(). If no CSV is provided, assume the data is in BigQuery. Write a SQL query to fetch the data. Crucial Rule: Your SQL query must include a WHERE clause filtering on the _PARTITIONTIME field to limit the data scanned. Load the SQL result into a pandas DataFrame. Process the data in the DataFrame using pandas to find the answer. If a comparison or trend is requested, generate a plot.  Provide a direct, natural language answer based on your findings.  Output Format Direct Answer: Start with a clear sentence that answers the user's question. Supporting Details: If you created a plot or a summary table, display it next. Code: Finish by including the full Python code you executed inside a collapsible <details> block."
+        }
+      ]
+    },
+    "tools": [
+      {
+        "code_execution": {}
+      }
+    ],
+    "contents": [
+      {
+        "role": "user",
+        "parts": {
+          "text": "Can you print \"Hello world!\"?"
+        }
+      },
+      {
+        "role": "model",
+        "parts": [
+          {
+            "text": "test"
+          },
+          {
+            "executable_code": {
+              "language": "PYTHON",
+              "code": "\nprint(\"hello world!\")\n"
+            }
+          },
+          {
+            "code_execution_result": {
+              "outcome": "OUTCOME_OK",
+              "output": "hello world!\n"
+            }
+          },
+          {
+            "text": "I have printed \"hello world!\" using the provided python code block. \n"
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "parts": {
+          "text": "What is the sum of the first 50 prime numbers? Generate and run code for the calculation, and make sure you get all 50."
+        }
+      }
+    ]
+  }
