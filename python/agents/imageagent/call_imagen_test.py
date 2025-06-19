@@ -25,18 +25,20 @@ from vertexai.preview.vision_models import ImageGenerationModel
 #import google.genai as types
 from google.adk.tools import FunctionTool, ToolContext
 
-async def image_generation_tool(
-    context: ToolContext,
+async def call_imagen_tool(
+    tool_context: ToolContext,
     prompt: str,
     artifact_filename: str,
-    aspect_ratio: str = "1:1"
+    version: str,
+    aspect_ratio: str
     ):
-    """Tool to generate an image from an description using Imagen.
+    """Tool to generate an image from a prompt using Imagen, and save it as an artifact.
     
     Args:
-        context: The ToolContext provided by the ADK Runner, used to save artifacts.
-        prompt: The text prompt to be sent to the Imagen model.
-        artifact_filename: The unique name for the artifact (e.g., 'report.png').
+        tool_context: The ToolContext provided by the ADK Runner, used to save artifacts.
+        prompt (str): The text prompt to be sent to the Imagen model.
+        artifact_filename (str): The unique name for the artifact (e.g., 'report.png').
+        version (str): The version (e.g v1, v2) of the generated artifact.
         aspect_ratio (str): Optional. The aspect ratio of the generated image (e.g., '1:1', '16:9', '9:16'). Defaults to '1:1'.
 
 
@@ -48,9 +50,10 @@ async def image_generation_tool(
         load_dotenv()   
 
         PROJECT_ID="remy-sandbox"
-        location="global"
-        gcs_bucket_name = os.getenv("GOOGLE_CLOUD_BUCKET", "ml-demo-rw")
-#savec to GCS but that's not used as of now
+
+#save to GCS but that's not used as of now
+        #location="global"
+        #gcs_bucket_name = os.getenv("GOOGLE_CLOUD_BUCKET", "ml-demo-rw")
         #output_gcs_uri=f"gs://{gcs_bucket_name}/imageagent/"+ uuid.uuid4().hex +".png"
 
 
@@ -120,31 +123,25 @@ async def image_generation_tool(
 
         # 4. --- Save the Artifact using the ToolContext ---
         # This is the core interaction with the ADK artifact system.
-        print(f"Saving artifact with filename: '{artifact_filename}'")
-        version = await context.save_artifact(
-            filename=artifact_filename,
+        full_image_filename = f"{version}:{artifact_filename}"
+        print(f"Saving artifact with filename: '{full_image_filename}'")
+        await tool_context.save_artifact(
+            filename=full_image_filename,
             artifact=image_artifact
         )
+
+        #save the prompt as an artifact
+        full_prompt_filename = f"{version}.prompt_fulltext"
+        await tool_context.save_artifact(
+        filename=full_prompt_filename,
+        artifact=types.Part(text=prompt),
+        )
         
-        result_message = f"Successfully saved image to artifact '{artifact_filename}' (version {version})."
+        result_message = f"Successfully saved image to artifact '{full_image_filename}' with prompt '{prompt}'."
         print(result_message)
 
-        return artifact_filename
+        return result_message
         
-
-        # --- 4. Extract GCS URI from Response ---
-        # When output_gcs_uri is specified, the 'uri' attribute of the image
-        # object in the response contains the full GCS path to the generated image.
-       # if response.images:
-          # image_gcs_uri = output_gcs_uri
-           # logging.info(f"Image generated and saved to GCS: {image_gcs_uri}")
-            #return image_gcs_uri
-           # return response.images, 
-      #  else:
-            # This case can occur if the prompt is filtered by safety policies
-            # and no image is generated as a result.
-          #  logging.warning("Image generation call succeeded but returned no images.")
-          #  return None
 
     except Exception as e:
         logging.error(f"An error occurred during image generation: {e}", exc_info=True)
@@ -174,24 +171,33 @@ async def main():
             print(f"--- MOCK CONTEXT: Saving artifact '{filename}' ---")
             # For demonstration, we'll save the image to the local directory
             # so you can see the output.
-            local_filename = filename.split(":")[-1] # remove 'user:' prefix
-            with open(local_filename, "wb") as f:
-                f.write(artifact.inline_data.data)
-            print(f"--- MOCK CONTEXT: Image saved locally to '{local_filename}' ---")
+            local_filename = filename.split(":")[-1]  # remove 'user:' prefix
+            if artifact.text is not None:
+                with open(local_filename, "w", encoding="utf-8") as f:
+                    f.write(artifact.text)
+                print(f"--- MOCK CONTEXT: Text artifact saved locally to '{local_filename}' ---")
+            elif artifact.inline_data and artifact.inline_data.data is not None:
+                with open(local_filename, "wb") as f:
+                    f.write(artifact.inline_data.data)
+                print(f"--- MOCK CONTEXT: Binary artifact (e.g., image) saved locally to '{local_filename}' ---")
+            else:
+                print(f"--- MOCK CONTEXT: Artifact '{filename}' has no text or inline_data to save. ---")
             return 0  # Return a mock version number
 
     # Set up the arguments for the tool call
     mock_context = MockToolContext()
     prompt = "A watercolor painting of a red panda sleeping on a cherry blossom tree"
-    filename = "user:red_panda.png"
+    filename = "red_panda.png"
+    version = "v1"
     aspect_ratio = "1:1"
 
     print("--- Starting Tool Execution Example ---")
     # Execute the tool
-    result = await image_generation_tool(
-        context=mock_context,
+    result = await call_imagen_tool(
+        tool_context=mock_context,
         prompt=prompt,
         artifact_filename=filename,
+        version=version,
         aspect_ratio=aspect_ratio
     )
     print(f"--- Tool finished with result: {result} ---")

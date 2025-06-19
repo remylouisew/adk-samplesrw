@@ -28,7 +28,6 @@ from google.adk.runners import Runner
 from google.adk.artifacts import InMemoryArtifactService # Or GcsArtifactService
 from google.adk.agents import LlmAgent # Any agent
 from google.adk.sessions import InMemorySessionService
-import typing
 #from google.adk.artifacts.tool_context import save_artifact
 
 import vertexai
@@ -85,7 +84,6 @@ async def call_imagen_tool(
     tool_context: ToolContext,
     prompt: str,
     artifact_filename: str,
-    version: str,
     aspect_ratio: str
     ):
     """Tool to generate an image from a prompt using Imagen, and save it as an artifact.
@@ -94,7 +92,6 @@ async def call_imagen_tool(
         tool_context: The ToolContext provided by the ADK Runner, used to save artifacts.
         prompt (str): The text prompt to be sent to the Imagen model.
         artifact_filename (str): The unique name for the artifact (e.g., 'report.png').
-        version (str): The version (e.g v1, v2) of the generated artifact.
         aspect_ratio (str): Optional. The aspect ratio of the generated image (e.g., '1:1', '16:9', '9:16'). Defaults to '1:1'.
 
 
@@ -179,24 +176,21 @@ async def call_imagen_tool(
 
         # 4. --- Save the Artifact using the ToolContext ---
         # This is the core interaction with the ADK artifact system.
-        full_image_filename = f"{artifact_filename}.{version}"
-        print(f"Saving artifact with filename: '{full_image_filename}'")
+        print(f"Saving artifact with filename: '{artifact_filename}'")
         await tool_context.save_artifact(
-            filename=full_image_filename,
+            filename=artifact_filename,
             artifact=image_artifact
         )
 
         #save the prompt as an artifact
-        full_prompt_filename = f"prompt_fulltext.{version}"
         await tool_context.save_artifact(
-        filename=full_prompt_filename,
-        artifact=types.Part(text=prompt),
-        )
+        filename="requested_statement_fulltext",
+        artifact=Part(text=reqd_pdf_text),
         
-        result_message = f"Successfully saved image to artifact '{full_image_filename}' with prompt '{prompt}'."
+        result_message = f"Successfully saved image to artifact '{artifact_filename}' (version {version})."
         print(result_message)
 
-        return result_message
+        return artifact_filename
         
 
     except Exception as e:
@@ -209,65 +203,81 @@ call_imagen = FunctionTool(
     func=call_imagen_tool
 )
 
-def store_state_tool(
-    state: dict[str, typing.Any], tool_context: ToolContext
-) -> dict[str, str]:
-    """Stores new state values in the ToolContext.
-
+async def artifact_to_inline(
+    tool_context: ToolContext,
+    artifact_filename: str
+):
+    """Tool to load an image artifact for an LLM agent to use.
+    
     Args:
-      state: A dict of new state values.
-      tool_context: ToolContext object.
+        context: The ToolContext provided by the ADK Runner, used to load artifacts.
+        artifact_filename: The unique filename of the artifact, used to locate it. This will be given verbatim as an input, do not alter the given filename in any way.
 
     Returns:
-      A dict with "status" and (optional) "error_message" keys.
+       types.Part : The inline image file, 
     """
-    logger.info("store_state_tool(): %s", state)
-    tool_context.state.update(state)
-    return {"status": "ok"}
+    try:
+        print(f"Loading artifact '{artifact_filename}'...")
+        image_artifact = await context.load_artifact(filename=artifact_filename)
+
+        return image_artifact
+    
+    except Exception as e:
+        logging.error(f"An error occurred during image loading: {e}", exc_info=True)
+        # Depending on the desired error handling for the agent, you might want to
+        # re-raise the exception or just return None.
+        return None
 
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
+'''f"""You are an expert prompt engineering assistant for Google's Imagen 3 text-to-image AI. You have three tasks:
+   1. Use the input provided by the user to determine an appropriate Imagen prompt, a unique artifact_filename (e.g., "my_image_description.png"), and an aspect_ratio.
+  2. Call the `call_imagen` tool with the generated prompt, artifact_filename, and aspect_ratio.
+  3. After the `call_imagen` tool returns the `artifact_filename` (which should be the same as the one you provided to the tool if successful):
+     Your final output for this turn MUST be a string representing a Python list containing exactly two string elements:
+     the `artifact_filename` returned by the tool, and the `prompt` you used for the `call_imagen` tool.
+     Example of correct final output format: `["my_image_description.png", "the full prompt text used"]`
+     Do NOT add any other text, conversation, or explanation before or after this list string.
 
-#may need to be image_artifact instead of srtifact_filename?
+     *only* output a python list in the format stated above.'''
 
 initial_image_agent = LlmAgent(
     name="InitialImageAgent",
     model=GEMINI_MODEL,
-    instruction=f"""You are an expert prompt engineering assistant for Google's Imagen 3 text-to-image AI. You have four tasks:
-    1. Ask the user what kind of image they would like to generate and use the input provided by the user to determine an appropriate Imagen prompt, a unique artifact_filename (e.g., "my_image_description.png"), and an aspect_ratio.
-  2. Call the `call_imagen` tool with the generated prompt, artifact_filename, and aspect_ratio, and version 'v1'. The version will always be 'v1'
-  3. Once the call_imagen tool has returned a response, explain the response to the user. 
-  4. Using the store_state_tool, store:
-    a. the generated prompt with key 'prompt' and value as the generated prompt
-    b. the generated image with key 'artifact_filename' and the value as the iamge artifact filename
+    include_contents='none',
+    
+    instruction=f"""You are an expert prompt engineering assistant for Google's Imagen 3 text-to-image AI. You have three tasks:
+    1. Ask the user what kind of image they would like to generate. 
+   1. Use the input provided by the user to determine an appropriate Imagen prompt, a unique artifact_filename (e.g., "my_image_description.png"), and an aspect_ratio.
+  2. Call the `call_imagen` tool with the generated prompt, artifact_filename, and aspect_ratio.
+  3. Once the call_imagen tool has returned a response, output the prompt that you generated. 
+
+     Your final response must only be the text prompt you sent to the call_imagen tool, or if the tool returns an error, share that error with the user.
 
 
 """,
     description="Generates an imagen prompt amd image based on user input",
-    tools=[call_imagen, store_state_tool]
+    tools=[call_imagen]
 )
 
 #need to have the agent take the URI as input!
 critic_agent_in_loop = LlmAgent(
     name="CriticAgent",
     model=GEMINI_MODEL,
+    include_contents='none',
     # MODIFIED Instruction: More nuanced completion criteria, look for clear improvement paths.
     instruction=f""" You are a critic of AI generated images. You will look at an image that has been generated by AI and judge whether it adequately depicts what is described in the prompt.
 
-  You have the following previous image:
-  <IMAGE>
-  {{artifact.artifact_filename}}
-  </IMAGE>
-
-  And the following previous prompt:
-  <PROMPT>
-  {{artifact.prompt}}
-  </PROMPT>
+    *** Current Image artifact filename and previous Prompt ***
+    ```
+    {{artifact_and_prompt}}
+    ```
 
     **Task:**
 
+    Load the image using the artifact_to_inline tool. Show it to the user.
 
     Review the image for adherence to the artistic style, composition, subject and color described in the previous prompt. Ask the user for their opinion on whether the image is acceptable or not.
 
@@ -287,17 +297,12 @@ refiner_agent_in_loop = LlmAgent(
     name="RefinerAgent",
     model=GEMINI_MODEL,
     # Relies solely on state via placeholders
+    include_contents='none',
     instruction=f"""You are an AI image generation Assistant refining an image prompt based on feedback OR exiting the process.
- *** previous prompt ***
- <PREVIOUS_PROMPT>
-{{artifact.prompt}}
- </CURRENT_PROMPT>
-
-** Current artifact filename **
- <CURRENT_FILENAME>
-{{artifact.artifact_filename}}
- </CURRENT_FILENAME>
-
+ *** Current Image artifact filename and previous Prompt ***
+    ```
+     {{artifact_and_prompt}}
+    ```
     **Critique/Suggestions:**
     {{criticism}}
 
@@ -305,17 +310,14 @@ refiner_agent_in_loop = LlmAgent(
     Analyze the 'Critique/Suggestions'.
     IF the critique is *exactly* "{COMPLETION_PHRASE}":
     You MUST call the 'exit_loop' function. Do not output any text.
-    ELSE (the critique contains actionable feedback) you have two tasks:
-    1. Carefully apply the suggestions to improve the previous prompt. 
-    Create a better prompt and submit it to Imagen to generate the new image using the call_imagen tool. The version should always be 'v2'. Show the image to the user.
-    2. Using the store_state_tool, store:
-        a. the generated prompt with key 'prompt' and value as the generated prompt
-        b. the generated image with key 'artifact_filename' and the value as the image artifact filename
+    ELSE (the critique contains actionable feedback):
+    Carefully apply the suggestions to improve the previous prompt. Create a better prompt and submit it to Imagen to generate the new image.
 
-    Either output the refined image OR call the exit_loop function.
+    Do not add explanations. Either output the refined image OR call the exit_loop function.
 """,
     description="Refines the image based on critique, or calls exit_loop if critique indicates completion.",
-    tools=[call_imagen, store_state_tool, exit_loop], # Provide the exit_loop tool
+    tools=[exit_loop], # Provide the exit_loop tool
+    output_key=STATE_CURRENT_IMAGE # Overwrites state['current_document'] with the refined version
 )
 
 # STEP 2: Refinement Loop Agent
@@ -326,28 +328,27 @@ refinement_loop = LoopAgent(
         critic_agent_in_loop,
         refiner_agent_in_loop,
     ],
-    max_iterations=2 # Limit loops
+    max_iterations=5 # Limit loops
 )
 
 # STEP 3: Overall Sequential Pipeline
 # For ADK tools compatibility, the root agent must be named `root_agent`
 
-root_agent = LlmAgent(
-    model=GEMINI_MODEL,
+root_agent = SequentialAgent(
     name="IterativeImagePipeline",
-    instruction="""
-    You will first run the initial_image_agent, and when it has generated an image, you will call the refinement loop
-    """,
     sub_agents=[
         initial_image_agent, # Run first to create initial doc
         refinement_loop       # Then run the critique/refine loop
     ],
     description="Generates an initial image and then iteratively refines it with critique using an exit tool."
 )
-
 '''
-root_agent = SequentialAgent(
+root_agent = LlmAgent(
+    model=GEMINI_MODEL,
     name="IterativeImagePipeline",
+    instruction="""
+    You will first run the initial_image_agent, and when it has returned a string like "my_image_description.png", "the full prompt text used", you will call the refinement loop
+    """,
     sub_agents=[
         initial_image_agent, # Run first to create initial doc
         refinement_loop       # Then run the critique/refine loop
